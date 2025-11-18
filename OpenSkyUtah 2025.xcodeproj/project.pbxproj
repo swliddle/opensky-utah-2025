@@ -10,22 +10,9 @@
 		3FFAEA9B2ECCB3B400B1617A /* OpenSkyUtah 2025.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "OpenSkyUtah 2025.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		3FFAEAC72ECCB64F00B1617A /* Exceptions for "OpenSkyUtah 2025" folder in "OpenSkyUtah 2025" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Resources/SampleOpenSkyData.json,
-			);
-			target = 3FFAEA9A2ECCB3B400B1617A /* OpenSkyUtah 2025 */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		3FFAEA9D2ECCB3B400B1617A /* OpenSkyUtah 2025 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				3FFAEAC72ECCB64F00B1617A /* Exceptions for "OpenSkyUtah 2025" folder in "OpenSkyUtah 2025" target */,
-			);
 			path = "OpenSkyUtah 2025";
 			sourceTree = "<group>";
 		};
