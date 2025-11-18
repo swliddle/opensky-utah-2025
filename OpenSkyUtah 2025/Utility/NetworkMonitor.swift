@@ -32,17 +32,20 @@ actor NetworkMonitor {
 
     // MARK: - Private methods
 
-    private func startMonitoring() {
+    nonisolated private func startMonitoring() {
         monitor.pathUpdateHandler = { [weak self] path in
-            Task {
+            guard let self else { return }
+            Task { [weak self] in
                 await self?.updateConnectionStatus(path.status == .satisfied)
             }
         }
+
         monitor.start(queue: queue)
     }
 
     private func updateConnectionStatus(_ connected: Bool) {
         let wasConnected = isConnected
+
         isConnected = connected
 
         if wasConnected != connected {

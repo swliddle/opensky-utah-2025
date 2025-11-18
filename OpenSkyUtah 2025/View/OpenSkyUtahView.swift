@@ -35,8 +35,10 @@ struct OpenSkyUtahView: View {
 
             // Keep task alive and cleanup on cancellation
             await withTaskCancellationHandler {
-                // Wait indefinitely
-                try? await Task.sleep(for: .seconds(.max))
+                // Keep the task alive until cancelled, sleeping in long chunks
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(60 * 60))
+                }
             } onCancel: {
                 // Stop auto-refresh when view disappears
                 Task { @MainActor in
@@ -212,3 +214,4 @@ struct OpenSkyUtahView: View {
         static let title = "OpenSky Utah"
     }
 }
+
