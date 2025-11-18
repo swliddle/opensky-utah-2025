@@ -8,11 +8,11 @@
 import Foundation
 import CoreLocation
 
-struct AircraftState {
+struct AircraftState: Codable {
 
     // MARK: - Position source
 
-    enum PositionSource: Int {
+    enum PositionSource: Int, Codable {
         case adsb = 0
         case asterix = 1
         case mlat = 2
@@ -44,23 +44,54 @@ struct AircraftState {
 
     // MARK: - Initialization
 
-    init(from element: [Any]) {
-        icao24 = AircraftState.string(for: element[0])
-        callsign = element[1] as? String
-        originCountry = AircraftState.string(for: element[2])
-        timePosition = element[3] as? Int
-        lastContact = AircraftState.int(for: element[4])
-        longitude = element[5] as? Double
-        latitude = element[6] as? Double
-        baroAltitude = element[7] as? Double
-        onGround = AircraftState.boolean(for: element[8])
-        velocity = element[9] as? Double
-        trueTrack = element[10] as? Double
-        verticalRate = element[11] as? Double
-        geoAltitude = element[13] as? Double
-        squawk = element[14] as? String
-        specialPurposeIndicator = AircraftState.boolean(for: element[15])
-        positionSource = PositionSource(rawValue: AircraftState.int(for: element[16])) ?? .adsb
+    nonisolated init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+
+        // Decode each field in order according to OpenSky API array format
+        icao24 = try container.decode(String.self)
+        callsign = try container.decodeIfPresent(String.self)
+        originCountry = try container.decode(String.self)
+        timePosition = try container.decodeIfPresent(Int.self)
+        lastContact = try container.decode(Int.self)
+        longitude = try container.decodeIfPresent(Double.self)
+        latitude = try container.decodeIfPresent(Double.self)
+        baroAltitude = try container.decodeIfPresent(Double.self)
+        onGround = try container.decode(Bool.self)
+        velocity = try container.decodeIfPresent(Double.self)
+        trueTrack = try container.decodeIfPresent(Double.self)
+        verticalRate = try container.decodeIfPresent(Double.self)
+        sensors = try container.decodeIfPresent([Int].self)
+        geoAltitude = try container.decodeIfPresent(Double.self)
+        squawk = try container.decodeIfPresent(String.self)
+        specialPurposeIndicator = try container.decode(Bool.self)
+
+        let positionSourceValue = try container.decode(Int.self)
+        positionSource = PositionSource(rawValue: positionSourceValue) ?? .adsb
+
+        detailsVisible = false
+    }
+
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+
+        // Encode each field in order according to OpenSky API array format
+        try container.encode(icao24)
+        try container.encode(callsign)
+        try container.encode(originCountry)
+        try container.encode(timePosition)
+        try container.encode(lastContact)
+        try container.encode(longitude)
+        try container.encode(latitude)
+        try container.encode(baroAltitude)
+        try container.encode(onGround)
+        try container.encode(velocity)
+        try container.encode(trueTrack)
+        try container.encode(verticalRate)
+        try container.encode(sensors)
+        try container.encode(geoAltitude)
+        try container.encode(squawk)
+        try container.encode(specialPurposeIndicator)
+        try container.encode(positionSource.rawValue)
     }
 
     // MARK: - Computed properties
@@ -109,40 +140,6 @@ struct AircraftState {
         } else {
             .standard
         }
-    }
-
-    // MARK: - Helpers
-
-    private static func boolean(for item: Any) -> Bool {
-        if let value = item as? Bool {
-            return value
-        }
-
-        fatalError("Unexpected conversion to boolean failed")
-    }
-
-    private static func double(for item: Any) -> Double {
-        if let value = item as? Double {
-            return value
-        }
-
-        fatalError("Unexpected conversion to double failed")
-    }
-
-    private static func int(for item: Any) -> Int {
-        if let value = item as? Int {
-            return value
-        }
-
-        fatalError("Unexpected conversion to int failed")
-    }
-
-    private static func string(for item: Any) -> String {
-        if let value = item as? String {
-            return value
-        }
-
-        fatalError("Unexpected conversion to string failed")
     }
 
     // MARK: - Constants

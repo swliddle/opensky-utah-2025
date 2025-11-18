@@ -75,27 +75,16 @@ import SwiftUI
 
     private func parseAndUpdateStates(from data: Data) async {
         // Parse JSON off-main to avoid blocking UI
-        let rawStates: [[Any]] = await Task.detached(priority: .userInitiated) { () -> [[Any]] in
-            guard
-                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                let states = json[await Key.statesKey] as? [[Any]]
-            else {
+        let parsed: [AircraftState] = await Task.detached(priority: .userInitiated) {
+            guard let response = try? JSONDecoder().decode(OpenSkyResponse.self, from: data),
+                  let states = response.states else {
                 return []
             }
             return states
         }.value
 
-        // Map to model types on the main actor to respect actor isolation of the initializer
-        let parsed: [AircraftState] = await MainActor.run {
-            rawStates.map { AircraftState(from: $0) }
-        }
-
         let previousStates = aircraftStates
         aircraftStates = parsed
         transferPriorVisibility(from: previousStates)
     }
-}
-
-struct Key {
-    static let statesKey = "states"
 }
