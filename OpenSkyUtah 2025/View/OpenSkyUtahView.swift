@@ -28,9 +28,30 @@ struct OpenSkyUtahView: View {
                 aircraftMap
             }
         }
-        .onAppear {
-            openSkyService.loadSampleData()
-            openSkyService.refreshStatus()
+        .task {
+            // Load initial data and start auto-refresh
+            await openSkyService.loadInitialData()
+            openSkyService.startAutoRefresh()
+
+            // Keep task alive and cleanup on cancellation
+            await withTaskCancellationHandler {
+                // Wait indefinitely
+                try? await Task.sleep(for: .seconds(.max))
+            } onCancel: {
+                // Stop auto-refresh when view disappears
+                Task { @MainActor in
+                    openSkyService.stopAutoRefresh()
+                }
+            }
+        }
+        .alert("Error", isPresented: .constant(openSkyService.errorMessage != nil)) {
+            Button("OK") {
+                openSkyService.errorMessage = nil
+            }
+        } message: {
+            if let errorMessage = openSkyService.errorMessage {
+                Text(errorMessage)
+            }
         }
     }
 
@@ -42,37 +63,133 @@ struct OpenSkyUtahView: View {
                 }
             }
             .listStyle(.plain)
+            .refreshable {
+                await openSkyService.refresh()
+            }
             .navigationTitle(Constants.title)
-            .toolbar { toolvarView }
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    statusView
+                }
+            }
         }
     }
 
     private var aircraftMap: some View {
         NavigationStack {
-            Map(initialPosition: .region(Utah.region)) {
-                ForEach(openSkyService.locatedAircraftStates) { aircraftState in
-                    Annotation(
-                        labelText(for: aircraftState),
-                        coordinate: aircraftState.coordinate
-                    ) {
-                        Image(systemName: aircraftState.status.airborneImageName)
-                            .imageScale(.large)
-                            .foregroundStyle(.tint)
-                            .rotationEffect(.degrees(aircraftState.heading))
-                            .onTapGesture {
-                                withAnimation {
-                                    openSkyService
-                                        .toggleDetailVisibility(for: aircraftState)
+            ZStack {
+                Map(initialPosition: .region(Utah.region)) {
+                    ForEach(openSkyService.locatedAircraftStates) { aircraftState in
+                        Annotation(
+                            labelText(for: aircraftState),
+                            coordinate: aircraftState.coordinate
+                        ) {
+                            Image(systemName: aircraftState.status.airborneImageName)
+                                .imageScale(.large)
+                                .foregroundStyle(.tint)
+                                .rotationEffect(.degrees(aircraftState.heading))
+                                .onTapGesture {
+                                    withAnimation {
+                                        openSkyService
+                                            .toggleDetailVisibility(for: aircraftState)
+                                    }
                                 }
-                            }
+                        }
+                    }
+                }
+                .mapStyle(.standard)
+                .mapControlVisibility(.visible)
+
+                // Offline banner at top
+                if openSkyService.isOffline {
+                    VStack {
+                        offlineBanner
+                        Spacer()
                     }
                 }
             }
-            .mapStyle(.standard)
-            .mapControlVisibility(.visible)
             .navigationTitle(Constants.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { toolvarView }
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    statusView
+                }
+            }
+        }
+    }
+
+    private var statusView: some View {
+        VStack(spacing: 2) {
+            Text(Constants.title)
+                .font(.headline)
+
+            HStack(spacing: 4) {
+                // Loading indicator
+                if openSkyService.isLoading {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                }
+
+                // Data source indicator
+                Text(dataSourceText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                // Offline indicator
+                if openSkyService.isOffline {
+                    Image(systemName: "wifi.slash")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    private var offlineBanner: some View {
+        HStack {
+            Image(systemName: "wifi.slash")
+            Text(offlineBannerText)
+                .font(.subheadline)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.red.opacity(0.9))
+        .foregroundStyle(.white)
+        .cornerRadius(8)
+        .padding()
+    }
+
+    private var offlineBannerText: String {
+        switch openSkyService.dataSource {
+        case .cache:
+            return "Offline - Showing Cached Data"
+        case .sample:
+            return "Offline - Showing Sample Data"
+        default:
+            return "Offline"
+        }
+    }
+
+    private var dataSourceText: String {
+        let source: String
+        switch openSkyService.dataSource {
+        case .none:
+            source = "No data"
+        case .sample:
+            source = "Sample"
+        case .cache:
+            source = "Cached"
+        case .network:
+            source = "Live"
+        }
+
+        if let lastFetch = openSkyService.lastFetchDate {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .abbreviated
+            let timeAgo = formatter.localizedString(for: lastFetch, relativeTo: Date())
+            return "\(source) • \(timeAgo)"
+        } else {
+            return source
         }
     }
 
@@ -86,15 +203,6 @@ struct OpenSkyUtahView: View {
             """
         } else {
             aircraftState.flight
-        }
-    }
-
-    private var toolvarView: some View {
-        Button {
-            openSkyService.refreshStatus()
-        } label: {
-            Image(systemName: "arrow.clockwise")
-                .imageScale(.large)
         }
     }
 
