@@ -7,8 +7,6 @@
 
 import Foundation
 
-import Foundation
-
 extension AircraftStatus {
     var airborneImageName: String {
         switch self {

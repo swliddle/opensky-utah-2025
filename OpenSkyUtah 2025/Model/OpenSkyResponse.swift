@@ -10,8 +10,10 @@ import Foundation
 struct OpenSkyResponse {
     let time: Int?
     let states: [AircraftState]?
+}
 
-    nonisolated init(from decoder: Decoder) throws {
+extension OpenSkyResponse: Decodable {
+    init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         time = try container.decodeIfPresent(Int.self, forKey: .time)
         states = try container.decodeIfPresent([AircraftState].self, forKey: .states)
@@ -22,5 +24,3 @@ struct OpenSkyResponse {
         case states
     }
 }
-
-extension OpenSkyResponse: Decodable {}

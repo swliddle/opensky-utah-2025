@@ -44,7 +44,7 @@ struct AircraftState: Codable {
 
     // MARK: - Initialization
 
-    nonisolated init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
 
         // Decode each field in order according to OpenSky API array format
@@ -71,7 +71,7 @@ struct AircraftState: Codable {
         detailsVisible = false
     }
 
-    nonisolated func encode(to encoder: Encoder) throws {
+    func encode(to encoder: Encoder) throws {
         var container = encoder.unkeyedContainer()
 
         // Encode each field in order according to OpenSky API array format
