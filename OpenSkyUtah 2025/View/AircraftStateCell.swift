@@ -46,3 +46,8 @@ struct AircraftStateCell: View {
         static let notRotated = 0.0
     }
 }
+
+#Preview {
+    AircraftStateCell(aircraftState: AircraftState(icao24: "DAL1464", velocity: 517.5, verticalRate: 20.3, geoAltitude: 30650))
+        .padding()
+}

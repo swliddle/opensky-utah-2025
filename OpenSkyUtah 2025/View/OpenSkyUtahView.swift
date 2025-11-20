@@ -98,3 +98,6 @@ struct OpenSkyUtahView: View {
     }
 }
 
+#Preview {
+    OpenSkyUtahView(openSkyService: OpenSkyService())
+}

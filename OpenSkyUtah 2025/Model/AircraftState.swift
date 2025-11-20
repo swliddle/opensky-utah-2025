@@ -44,6 +44,18 @@ struct AircraftState: Codable {
 
     // MARK: - Initialization
 
+    init(icao24: String, velocity: Double, verticalRate: Double, geoAltitude: Double) {
+        self.icao24 = icao24
+        self.velocity = velocity
+        self.verticalRate = verticalRate
+        self.geoAltitude = geoAltitude
+        self.originCountry = ""
+        lastContact = 0
+        onGround = false
+        positionSource = .adsb
+        specialPurposeIndicator = false
+    }
+
     nonisolated init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
 
