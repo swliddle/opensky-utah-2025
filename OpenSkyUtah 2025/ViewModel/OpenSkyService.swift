@@ -13,6 +13,11 @@ import SwiftUI
     // MARK: - Properties
 
     private var aircraftStates: [AircraftState] = []
+    private var lastUpdate = Date()
+    
+    private var cacheFileUrl: URL {
+        URL.documentsDirectory.appending(path: "opensky_cache.json")
+    }
 
     // MARK: - Model access
 
@@ -24,8 +29,11 @@ import SwiftUI
 
     // Load initial data on app launch - cache first, then sample data fallback
     func loadInitialData() async {
-        await loadSampleData()
-        await refreshFromNetwork()
+        if await !loadFromCache() {
+            await loadSampleData()
+        }
+        
+        startAutoRefresh()
     }
 
     // Manual refresh triggered by user (pull-to-refresh)
@@ -49,6 +57,16 @@ import SwiftUI
             return
         }
         await parseAndUpdateStates(from: data)
+    }
+    
+    private func loadFromCache() async -> Bool {
+        guard let data = try? Data(contentsOf: cacheFileUrl) else {
+            return false
+        }
+        
+        await parseAndUpdateStates(from: data)
+        
+        return true
     }
 
     // Parse JSON data and update aircraft states
@@ -99,8 +117,22 @@ import SwiftUI
             }
             
             await parseAndUpdateStates(from: data)
+            saveToCache(data: data)
         } catch {
             // Ignore failure, just don't replace the data
+        }
+    }
+    
+    private func saveToCache(data: Data) {
+        try? data.write(to: cacheFileUrl)
+    }
+    
+    private func startAutoRefresh() {
+        Task {
+            while !Task.isCancelled {
+                await refreshFromNetwork()
+                try? await Task.sleep(for: .seconds(30))
+            }
         }
     }
 
