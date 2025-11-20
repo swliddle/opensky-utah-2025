@@ -45,6 +45,9 @@ struct OpenSkyUtahView: View {
                 await openSkyService.refresh()
             }
             .navigationTitle(Constants.title)
+            .toolbar {
+                refreshButton
+            }
         }
     }
 
@@ -75,6 +78,21 @@ struct OpenSkyUtahView: View {
             }
             .navigationTitle(Constants.title)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                refreshButton
+            }
+        }
+    }
+    
+    private var refreshButton: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                Task {
+                    await openSkyService.refresh()
+                }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+            }
         }
     }
 
