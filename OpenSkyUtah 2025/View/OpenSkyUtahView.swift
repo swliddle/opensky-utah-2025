@@ -45,9 +45,6 @@ struct OpenSkyUtahView: View {
                 await openSkyService.refresh()
             }
             .navigationTitle(Constants.title)
-            .toolbar {
-                refreshButton
-            }
         }
     }
 
