@@ -83,10 +83,9 @@ import SwiftUI
     // Parse JSON data and update aircraft states
     private func parseAndUpdateStates(from data: Data) async {
         do {
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(OpenSkyResponse.self, from: data)
+            let states = try await parse(data: data)
 
-            guard let states = response.states, !states.isEmpty else {
+            guard !states.isEmpty else {
                 return
             }
 
@@ -96,6 +95,13 @@ import SwiftUI
         } catch {
             print("JSON parsing failed: \(error)")
         }
+    }
+
+    // Helper to parse data off the main actor
+    nonisolated private func parse(data: Data) async throws -> [AircraftState] {
+        let decoder = JSONDecoder()
+        let response = try decoder.decode(OpenSkyResponse.self, from: data)
+        return response.states ?? []
     }
 
     // Transfer detailsVisible state from previous data to new data

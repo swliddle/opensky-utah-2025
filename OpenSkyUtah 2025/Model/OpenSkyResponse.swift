@@ -13,7 +13,7 @@ struct OpenSkyResponse {
 }
 
 extension OpenSkyResponse: Decodable {
-    init(from decoder: Decoder) throws {
+    nonisolated init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         time = try container.decodeIfPresent(Int.self, forKey: .time)
         states = try container.decodeIfPresent([AircraftState].self, forKey: .states)
