@@ -25,12 +25,12 @@ import SwiftUI
     // Load initial data on app launch - cache first, then sample data fallback
     func loadInitialData() async {
         await loadSampleData()
-        await refreshFromNetwork()
+        // TODO
     }
 
     // Manual refresh triggered by user (pull-to-refresh)
-    func refresh() async {
-        await refreshFromNetwork()
+    func refresh() {
+        // TODO
     }
 
     // Toggle detail visibility for an aircraft on the map
@@ -49,35 +49,6 @@ import SwiftUI
             return
         }
         await parseAndUpdateStates(from: data)
-    }
-
-    // Fetch fresh data from network
-    private func refreshFromNetwork() async {
-        guard !Task.isCancelled else { return }
-
-        do {
-            guard let url = Utah.openSkyUrl else {
-                return
-            }
-
-            let (data, response) = try await URLSession.shared.data(from: url)
-
-            guard !Task.isCancelled else {
-                return
-            }
-
-            // Validate HTTP response
-            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                return
-            }
-
-            // Parse and update states
-            await parseAndUpdateStates(from: data)
-        } catch {
-            guard !Task.isCancelled else {
-                return
-            }
-        }
     }
 
     // Parse JSON data and update aircraft states
