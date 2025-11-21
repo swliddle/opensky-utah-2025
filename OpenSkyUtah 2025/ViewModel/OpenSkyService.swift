@@ -120,11 +120,16 @@ import SwiftUI
             saveToCache(data: data)
         } catch {
             // Ignore failure, just don't replace the data
+            print("Download failure: \(error.localizedDescription), url: \(url)")
         }
     }
 
     private func saveToCache(data: Data) {
-        try? data.write(to: cacheFileUrl)
+        let url = cacheFileUrl
+
+        Task.detached {
+            try? data.write(to: url)
+        }
     }
 
     private func startAutoRefresh() {
