@@ -30,14 +30,6 @@ import SwiftUI
     var errorMessage: String?
     var dataSource: DataSource = .none
 
-    // Dependencies
-    private let cacheManager = CacheManager()
-    private let networkMonitor = NetworkMonitor()
-
-    // Task tracking for cancellation and deduplication
-    private var refreshTask: Task<Void, Never>?
-    private var autoRefreshTask: Task<Void, Never>?
-
     // MARK: - Model access
 
     var locatedAircraftStates: [AircraftState] {
@@ -48,66 +40,12 @@ import SwiftUI
 
     /// Load initial data on app launch - cache first, then sample data fallback
     func loadInitialData() async {
-        // First, try to load from cache
-        if let (data, timestamp) = await cacheManager.load() {
-            await parseAndUpdateStates(from: data)
-            lastFetchDate = timestamp
-            dataSource = .cache
-            print("📦 Loaded cached data from \(timestamp)")
-        } else {
-            // No cache available, load sample data
-            await loadSampleDataAsync()
-        }
-
-        // Check network status
-        isOffline = !(await networkMonitor.checkConnection())
-
-        // If online, fetch fresh data
-        if !isOffline {
-            await refreshFromNetwork()
-        }
-    }
-
-    /// Start auto-refresh timer (30 seconds)
-    func startAutoRefresh() {
-        // Cancel any existing auto-refresh
-        autoRefreshTask?.cancel()
-
-        autoRefreshTask = Task {
-            while !Task.isCancelled {
-                // Wait 30 seconds
-                try? await Task.sleep(for: .seconds(30))
-
-                guard !Task.isCancelled else { break }
-
-                // Only refresh if online
-                let connected = await networkMonitor.checkConnection()
-                isOffline = !connected
-
-                if connected {
-                    await refreshFromNetwork()
-                }
-            }
-        }
-    }
-
-    /// Stop auto-refresh timer
-    func stopAutoRefresh() {
-        autoRefreshTask?.cancel()
-        autoRefreshTask = nil
+        await loadSampleDataAsync()
     }
 
     /// Manual refresh triggered by user (pull-to-refresh)
     func refresh() async {
-        // Check network status
-        let connected = await networkMonitor.checkConnection()
-        isOffline = !connected
-
-        if connected {
-            await refreshFromNetwork()
-        } else {
-            errorMessage = "No network connection available"
-        }
+        await refreshFromNetwork()
     }
 
     /// Toggle detail visibility for an aircraft on the map
@@ -134,10 +72,7 @@ import SwiftUI
 
     /// Fetch fresh data from network and cache it
     private func refreshFromNetwork() async {
-        // Cancel any in-flight refresh to avoid duplication
-        refreshTask?.cancel()
-
-        refreshTask = Task {
+        Task {
             guard !Task.isCancelled else { return }
 
             isLoading = true
@@ -166,17 +101,6 @@ import SwiftUI
 
                 // Parse and update states
                 await parseAndUpdateStates(from: data)
-
-                // Cache the successful response
-                try? await cacheManager.save(data)
-
-                // Update metadata
-                lastFetchDate = Date()
-                dataSource = .network
-                isLoading = false
-
-                print("🌐 Fetched live data from network")
-
             } catch {
                 guard !Task.isCancelled else {
                     isLoading = false
@@ -188,8 +112,6 @@ import SwiftUI
                 print("❌ Network fetch failed: \(error)")
             }
         }
-
-        await refreshTask?.value
     }
 
     /// Parse JSON data and update aircraft states

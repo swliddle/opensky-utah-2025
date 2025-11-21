@@ -31,7 +31,6 @@ struct OpenSkyUtahView: View {
         .task {
             // Load initial data and start auto-refresh
             await openSkyService.loadInitialData()
-            openSkyService.startAutoRefresh()
 
             // Keep task alive and cleanup on cancellation
             await withTaskCancellationHandler {
@@ -40,10 +39,6 @@ struct OpenSkyUtahView: View {
                     try? await Task.sleep(for: .seconds(60 * 60))
                 }
             } onCancel: {
-                // Stop auto-refresh when view disappears
-                Task { @MainActor in
-                    openSkyService.stopAutoRefresh()
-                }
             }
         }
         .alert("Error", isPresented: .constant(openSkyService.errorMessage != nil)) {
