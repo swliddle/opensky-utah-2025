@@ -8,7 +8,7 @@
 import Foundation
 import CoreLocation
 
-struct AircraftState: Codable {
+struct AircraftState {
 
     // MARK: - Position source
 
@@ -57,68 +57,6 @@ struct AircraftState: Codable {
         onGround = false
         positionSource = .adsb
         specialPurposeIndicator = false
-    }
-
-    // Just declaring conformance to Codable is usually enough to synthesize this init
-    // method, but because we sometimes want to decode values off the main actor, we
-    // need to write the init method and declare it to be nonisolated.  There are also
-    // a couple of tweaks we make to what would have been synthesized.
-    nonisolated init(from decoder: Decoder) throws {
-        // Here, we're telling the decoder that the object we're converting isn't using
-        // keys.  OpenSky sends back an array of values for each state object, not a
-        // key/value dictionary of properties.  So we should use an unkeyed container.
-        var container = try decoder.unkeyedContainer()
-
-        // Decode each field in order according to OpenSky API array format
-        icao24 = try container.decode(String.self)
-        callsign = try container.decodeIfPresent(String.self)
-        originCountry = try container.decode(String.self)
-        timePosition = try container.decodeIfPresent(Int.self)
-        lastContact = try container.decode(Int.self)
-        longitude = try container.decodeIfPresent(Double.self)
-        latitude = try container.decodeIfPresent(Double.self)
-        baroAltitude = try container.decodeIfPresent(Double.self)
-        onGround = try container.decode(Bool.self)
-        velocity = try container.decodeIfPresent(Double.self)
-        trueTrack = try container.decodeIfPresent(Double.self)
-        verticalRate = try container.decodeIfPresent(Double.self)
-        sensors = try container.decodeIfPresent([Int].self)
-        geoAltitude = try container.decodeIfPresent(Double.self)
-        squawk = try container.decodeIfPresent(String.self)
-        specialPurposeIndicator = try container.decode(Bool.self)
-
-        // The synthesized init would not do the following, which we do to provide a
-        // default value of .adsb for positionSource.  This might be overkill.
-        let positionSourceValue = try container.decode(Int.self)
-
-        positionSource = PositionSource(rawValue: positionSourceValue) ?? .adsb
-    }
-
-    // Again, there is a default implementation of encode that is provided when
-    // we declare conformance to Codable, but if we write our own version, we can
-    // control things like using an unkeyed container.  And importantly, we can
-    // allow this function to work in nonisolated contexts.
-    nonisolated func encode(to encoder: Encoder) throws {
-        var container = encoder.unkeyedContainer()
-
-        // Encode each field in order according to OpenSky API array format
-        try container.encode(icao24)
-        try container.encode(callsign)
-        try container.encode(originCountry)
-        try container.encode(timePosition)
-        try container.encode(lastContact)
-        try container.encode(longitude)
-        try container.encode(latitude)
-        try container.encode(baroAltitude)
-        try container.encode(onGround)
-        try container.encode(velocity)
-        try container.encode(trueTrack)
-        try container.encode(verticalRate)
-        try container.encode(sensors)
-        try container.encode(geoAltitude)
-        try container.encode(squawk)
-        try container.encode(specialPurposeIndicator)
-        try container.encode(positionSource.rawValue)
     }
 
     // MARK: - Computed properties
@@ -183,6 +121,70 @@ struct AircraftState: Codable {
     private struct Conversion {
         static let feetPerMeter = 3.280839895
         static let milesPerHourPerMetersPerSecond = feetPerMeter * 3600 / 5280
+    }
+}
+
+extension AircraftState: Codable {
+    // Just declaring conformance to Codable is usually enough to synthesize this init
+    // method, but because we sometimes want to decode values off the main actor, we
+    // need to write the init method and declare it to be nonisolated.  There are also
+    // a couple of tweaks we make to what would have been synthesized.
+    nonisolated init(from decoder: Decoder) throws {
+        // Here, we're telling the decoder that the object we're converting isn't using
+        // keys.  OpenSky sends back an array of values for each state object, not a
+        // key/value dictionary of properties.  So we should use an unkeyed container.
+        var container = try decoder.unkeyedContainer()
+
+        // Decode each field in order according to OpenSky API array format
+        icao24 = try container.decode(String.self)
+        callsign = try container.decodeIfPresent(String.self)
+        originCountry = try container.decode(String.self)
+        timePosition = try container.decodeIfPresent(Int.self)
+        lastContact = try container.decode(Int.self)
+        longitude = try container.decodeIfPresent(Double.self)
+        latitude = try container.decodeIfPresent(Double.self)
+        baroAltitude = try container.decodeIfPresent(Double.self)
+        onGround = try container.decode(Bool.self)
+        velocity = try container.decodeIfPresent(Double.self)
+        trueTrack = try container.decodeIfPresent(Double.self)
+        verticalRate = try container.decodeIfPresent(Double.self)
+        sensors = try container.decodeIfPresent([Int].self)
+        geoAltitude = try container.decodeIfPresent(Double.self)
+        squawk = try container.decodeIfPresent(String.self)
+        specialPurposeIndicator = try container.decode(Bool.self)
+
+        // The synthesized init would not do the following, which we do to provide a
+        // default value of .adsb for positionSource.  This might be overkill.
+        let positionSourceValue = try container.decode(Int.self)
+
+        positionSource = PositionSource(rawValue: positionSourceValue) ?? .adsb
+    }
+
+    // Again, there is a default implementation of encode that is provided when
+    // we declare conformance to Codable, but if we write our own version, we can
+    // control things like using an unkeyed container.  And importantly, we can
+    // allow this function to work in nonisolated contexts.
+    nonisolated func encode(to encoder: Encoder) throws {
+        var container = encoder.unkeyedContainer()
+
+        // Encode each field in order according to OpenSky API array format
+        try container.encode(icao24)
+        try container.encode(callsign)
+        try container.encode(originCountry)
+        try container.encode(timePosition)
+        try container.encode(lastContact)
+        try container.encode(longitude)
+        try container.encode(latitude)
+        try container.encode(baroAltitude)
+        try container.encode(onGround)
+        try container.encode(velocity)
+        try container.encode(trueTrack)
+        try container.encode(verticalRate)
+        try container.encode(sensors)
+        try container.encode(geoAltitude)
+        try container.encode(squawk)
+        try container.encode(specialPurposeIndicator)
+        try container.encode(positionSource.rawValue)
     }
 }
 
