@@ -56,6 +56,7 @@ import SwiftUI
               let data = try? Data(contentsOf: url) else {
             return
         }
+
         await parseAndUpdateStates(from: data)
     }
     

@@ -10,14 +10,20 @@ import MapKit
 
 struct OpenSkyUtahView: View {
 
+    // MARK: - Properties
+
+    let openSkyService: OpenSkyService
+
+    // MARK: - Tab management
+
     private enum Tabs {
         case list
         case map
     }
 
-    let openSkyService: OpenSkyService
-
     @State private var selectedTab = Tabs.map
+
+    // MARK: - Main view
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -32,6 +38,8 @@ struct OpenSkyUtahView: View {
             await openSkyService.loadInitialData()
         }
     }
+
+    // MARK: - Helpers
 
     private var aircraftList: some View {
         NavigationStack {
