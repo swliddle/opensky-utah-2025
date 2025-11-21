@@ -10,25 +10,14 @@ import SwiftUI
 @MainActor
 @Observable class OpenSkyService {
 
-    // MARK: - Types
-
-    enum DataSource {
-        case none
-        case sample
-        case cache
-        case network
-    }
-
     // MARK: - Properties
 
     private var aircraftStates: [AircraftState] = []
-
-    // State tracking
-    var isLoading = false
-    var isOffline = false
-    var lastFetchDate: Date?
-    var errorMessage: String?
-    var dataSource: DataSource = .none
+    private var lastUpdate = Date()
+    
+    private var cacheFileUrl: URL {
+        URL.documentsDirectory.appending(path: "opensky_cache.json")
+    }
 
     // MARK: - Model access
 
@@ -38,17 +27,21 @@ import SwiftUI
 
     // MARK: - Public methods
 
-    /// Load initial data on app launch - cache first, then sample data fallback
+    // Load initial data on app launch - cache first, then sample data fallback
     func loadInitialData() async {
-        await loadSampleDataAsync()
+        if await !loadFromCache() {
+            await loadSampleData()
+        }
+        
+        startAutoRefresh()
     }
 
-    /// Manual refresh triggered by user (pull-to-refresh)
+    // Manual refresh triggered by user (pull-to-refresh)
     func refresh() async {
         await refreshFromNetwork()
     }
 
-    /// Toggle detail visibility for an aircraft on the map
+    // Toggle detail visibility for an aircraft on the map
     func toggleDetailVisibility(for aircraftState: AircraftState) {
         if let selectedIndex = aircraftStates.firstIndex(matching: aircraftState) {
             aircraftStates[selectedIndex].detailsVisible.toggle()
@@ -57,86 +50,98 @@ import SwiftUI
 
     // MARK: - Private methods
 
-    /// Load sample data from bundle
-    private func loadSampleDataAsync() async {
+    // Load sample data from bundle
+    private func loadSampleData() async {
         guard let url = Bundle.main.url(forResource: "SampleOpenSkyData", withExtension: "json"),
               let data = try? Data(contentsOf: url) else {
-            errorMessage = "Failed to load sample data"
             return
         }
         await parseAndUpdateStates(from: data)
-        dataSource = .sample
-        lastFetchDate = nil
-        print("📝 Loaded sample data")
     }
-
-    /// Fetch fresh data from network and cache it
-    private func refreshFromNetwork() async {
-        Task {
-            guard !Task.isCancelled else { return }
-
-            isLoading = true
-            errorMessage = nil
-
-            do {
-                guard let url = Utah.openSkyUrl else {
-                    errorMessage = "Invalid API URL"
-                    isLoading = false
-                    return
-                }
-
-                let (data, response) = try await URLSession.shared.data(from: url)
-
-                guard !Task.isCancelled else {
-                    isLoading = false
-                    return
-                }
-
-                // Validate HTTP response
-                if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                    errorMessage = "Server error: HTTP \(http.statusCode)"
-                    isLoading = false
-                    return
-                }
-
-                // Parse and update states
-                await parseAndUpdateStates(from: data)
-            } catch {
-                guard !Task.isCancelled else {
-                    isLoading = false
-                    return
-                }
-
-                errorMessage = "Network error: \(error.localizedDescription)"
-                isLoading = false
-                print("❌ Network fetch failed: \(error)")
-            }
+    
+    private func loadFromCache() async -> Bool {
+        guard let data = try? Data(contentsOf: cacheFileUrl) else {
+            return false
         }
+        
+        await parseAndUpdateStates(from: data)
+        
+        return true
     }
 
-    /// Parse JSON data and update aircraft states
+    // Parse JSON data and update aircraft states
     private func parseAndUpdateStates(from data: Data) async {
         do {
-            let decoder = JSONDecoder()
-            let response = try decoder.decode(OpenSkyResponse.self, from: data)
+            let states = try await parse(data: data)
 
-            guard let states = response.states, !states.isEmpty else {
-                errorMessage = "No aircraft data available"
+            guard !states.isEmpty else {
                 return
             }
 
             let previousStates = aircraftStates
+
             aircraftStates = states
             transferPriorVisibility(from: previousStates)
-            errorMessage = nil
-
         } catch {
-            errorMessage = "Failed to parse data: \(error.localizedDescription)"
-            print("❌ JSON parsing failed: \(error)")
+            print("JSON parsing failed: \(error)")
         }
     }
 
-    /// Transfer detailsVisible state from previous data to new data
+    // Helper to parse data off the main actor
+    nonisolated private func parse(data: Data) async throws -> [AircraftState] {
+        let decoder = JSONDecoder()
+        let response = try decoder.decode(OpenSkyResponse.self, from: data)
+
+        return response.states ?? []
+    }
+    
+    private func refreshFromNetwork() async {
+        guard !Task.isCancelled else {
+            return
+        }
+
+        guard let url = Utah.openSkyUrl else {
+            return
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            if let http = response as? HTTPURLResponse,
+               !(200...299).contains(http.statusCode) {
+                return
+            }
+
+            await parseAndUpdateStates(from: data)
+            saveToCache(data: data)
+        } catch {
+            // Ignore failure, just don't replace the data
+            print("Download failure: \(error.localizedDescription), url: \(url)")
+        }
+    }
+
+    private func saveToCache(data: Data) {
+        let url = cacheFileUrl
+
+        Task.detached {
+            try? data.write(to: url)
+        }
+    }
+
+    private func startAutoRefresh() {
+        Task {
+            while !Task.isCancelled {
+                await refreshFromNetwork()
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
+    }
+
+    // Transfer detailsVisible state from previous data to new data
     private func transferPriorVisibility(from previousStates: [AircraftState]) {
         previousStates.forEach { previousState in
             if previousState.detailsVisible {

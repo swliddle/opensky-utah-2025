@@ -10,7 +10,13 @@ import Foundation
 struct OpenSkyResponse {
     let time: Int?
     let states: [AircraftState]?
+}
 
+// We could simply declare OpenSkyResponse to be Codable, and that will
+// synthesize init and encode methods.  But because we're wanting to control
+// isolation mode, we explicitly write out the init ourselves here and use
+// the nonisolated keyword.  This allows it to run off of the main actor.
+extension OpenSkyResponse: Decodable {
     nonisolated init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         time = try container.decodeIfPresent(Int.self, forKey: .time)
@@ -22,5 +28,3 @@ struct OpenSkyResponse {
         case states
     }
 }
-
-extension OpenSkyResponse: Decodable {}
