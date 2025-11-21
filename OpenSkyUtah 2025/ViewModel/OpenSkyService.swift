@@ -103,10 +103,10 @@ import SwiftUI
         guard let url = Utah.openSkyUrl else {
             return
         }
-        
+
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
-            
+
             guard !Task.isCancelled else {
                 return
             }
@@ -115,18 +115,18 @@ import SwiftUI
                !(200...299).contains(http.statusCode) {
                 return
             }
-            
+
             await parseAndUpdateStates(from: data)
             saveToCache(data: data)
         } catch {
             // Ignore failure, just don't replace the data
         }
     }
-    
+
     private func saveToCache(data: Data) {
         try? data.write(to: cacheFileUrl)
     }
-    
+
     private func startAutoRefresh() {
         Task {
             while !Task.isCancelled {

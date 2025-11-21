@@ -8,6 +8,7 @@
 import Foundation
 
 extension AircraftStatus {
+    // Icon names to be used on the map (either in the air or on the ground)
     var airborneImageName: String {
         switch self {
             case .onGround:
@@ -17,6 +18,7 @@ extension AircraftStatus {
         }
     }
 
+    // Icon names to be used on the list
     var systemImageName: String {
         switch self {
             case .ascending:
